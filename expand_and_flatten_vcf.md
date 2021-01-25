@@ -1,4 +1,6 @@
 # Expand and Flatten VCF
+`./expand_and_flatten_vcf.py -i kaviar_100.vcf -o kaviar_expanded.vcf`
+
 ## VCF Format
 The [canonical format for a VCF file](https://samtools.github.io/hts-specs/VCFv4.2.pdf) contains 8 "fixed fields"
 
@@ -50,7 +52,7 @@ The VCF header lines specify the schema for the data contained in the `INFO` col
 ##INFO=<ID=CLNSIG,Number=.,Type=String,Description="Clinical significance for this single variant">
 ```
  
-## Generate kaviar VCF Schema from Header
+## Generate Full VCF Schema from Header
 While there are many standard or customary INFO fields, such as those in the documentation, custom ones are fine, as in the ClinVar example. In order to generate a full schema specification we need to parse the header rows. We combine this parsed schema with the schema for the fixed fields (constructed by hand), which is shown below.
 
 ## Usage
