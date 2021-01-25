@@ -1,6 +1,8 @@
 # Expand and Flatten VCF
 `./expand_and_flatten_vcf.py -i kaviar_100.vcf -o kaviar_expanded.vcf`
 
+Expand the INFO column and flatten multiple variants to turn a canonical VCF into a flat table. Also extract the schema. Useful for storing in a database---for instance, uploading to GCP BigQuery.
+
 ## VCF Format
 The [canonical format for a VCF file](https://samtools.github.io/hts-specs/VCFv4.2.pdf) contains 8 "fixed fields"
 
