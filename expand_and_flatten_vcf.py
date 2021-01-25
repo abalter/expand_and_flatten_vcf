@@ -6,7 +6,7 @@ import sys
 import json
 import textwrap
 
-base_schema = [
+fixed_schema = [
   {
     "description": "Chromosome",
     "mode": "NULLABLE",
@@ -54,7 +54,7 @@ base_schema = [
 
 class VCF_INFO_EXPANDER():
 
-    base_schema = [
+    fixed_schema = [
       {
         "description": "Chromosome",
         "mode": "NULLABLE",
@@ -105,7 +105,7 @@ class VCF_INFO_EXPANDER():
             output_vcf_file=None,
             info_column_index=7,
             info_delimiter = ";",
-            base_schema=base_schema
+            fixed_schema=fixed_schema
         ):
         
 #         print("__init__")
@@ -113,12 +113,16 @@ class VCF_INFO_EXPANDER():
         self.input_vcf_file = input_vcf_file
         self.output_vcf_file = output_vcf_file
         self.info_column_index = info_column_index
-        self.base_schema = json.loads(base_schema)
+        self.fixed_schema = json.loads(fixed_schema)
+#         print(self.fixed_schema)
         self.info_delimiter = info_delimiter
         
         self.info_schema = self.parseVCF_Schema()
+#         print(self.info_schema)
         
-        self.base_fields = [var["name"] for var in self.base_schema]
+        self.full_schema = self.fixed_schema + self.info_schema
+        
+        self.base_fields = [var["name"] for var in self.fixed_schema]
         self.info_fields = [var["name"] for var in self.info_schema]
         self.all_fields = self.base_fields + self.info_fields
         
@@ -265,7 +269,7 @@ class VCF_INFO_EXPANDER():
         
         info_column_index = self.info_column_index
         info_schema = self.info_schema
-        base_schema = self.base_schema
+        fixed_schema = self.fixed_schema
         infilename = self.input_vcf_file
         outfilename = self.output_vcf_file
         
@@ -298,6 +302,17 @@ class VCF_INFO_EXPANDER():
                     self.writeRowDict(row_dict)
 
         dummy = self.outfile.close()
+        
+        
+    def getSchema(self):
+#         print("getSchema")
+        
+        if self.output_vcf_file is None:
+            self.outfile = sys.stdout
+        else:
+            self.outfile = open(self.output_vcf_file, "w")
+            
+        dummy = self.outfile.write(json.dumps(self.full_schema, indent=2))
 
 
 if __name__ == "__main__":
@@ -324,6 +339,17 @@ For example:
 <example of multiple variants and expanded version> 
 """,
         formatter_class=argparse.RawTextHelpFormatter
+        )
+    
+    parser.add_argument('operation',
+        type = str,
+        help = """\
+ Which operation to perform. To export an expanded and flattend
+ vcf file, use "vcf". To export the full schema use "schema". The
+ default value is "vcf" if not specified.
+ """,
+        choices = ["vcf", "schema"],
+        default = "vcf"
         )
     
     parser.add_argument('--input_vcf', '-i',
@@ -356,7 +382,7 @@ For example:
  """,
         default=";"
         )
-    parser.add_argument('--base_schema', '-b',
+    parser.add_argument('--fixed_schema', '-b',
         required=False,
         type=str,
         help="""\
@@ -364,13 +390,15 @@ The standard VCF format has 7 columns of data and the INFO column.
 The schema for these first 7 \"base\" columns are not in the header. 
 This should be a JSON string containing the base schema if different 
 than the default ones in this package. 
-Check `VCF_INFO_EXPANDER.base_schema`
+Check `VCF_INFO_EXPANDER.fixed_schema`
 """,
-        default=json.dumps(base_schema)
+        default=json.dumps(fixed_schema)
         )
 
     args = parser.parse_args()
-                        
+    
+    operation = args.operation
+    print("operation", operation)
     input_vcf_file = args.input_vcf
 #     print("input_vcf_file", input_vcf_file)
     output_vcf_file = args.output_vcf
@@ -379,8 +407,10 @@ Check `VCF_INFO_EXPANDER.base_schema`
 #     print("info_delimiter", info_delimiter)
     info_column_index = args.info_column_index
 #     print("info_column_index", info_column_index)
-    base_schema = args.base_schema
-#     print("base_schema", base_schema)
+    fixed_schema = args.fixed_schema
+    if fixed_schema is None:
+        fixed_schema = json.dumps(fixed_schema)
+#     print("fixed_schema", fixed_schema)
                         
                         
     expander = VCF_INFO_EXPANDER(
@@ -388,7 +418,11 @@ Check `VCF_INFO_EXPANDER.base_schema`
         output_vcf_file=output_vcf_file,
         info_column_index=info_column_index,
         info_delimiter=info_delimiter,
-        base_schema=base_schema
+        fixed_schema=fixed_schema
     )
 
-    expander.expandAndFlatten()
+    if operation == "vcf":
+        expander.expandAndFlatten()
+    else:
+        expander.getSchema()
+        
