@@ -1,5 +1,6 @@
 # Expand and Flatten VCF
-`./expand_and_flatten_vcf.py schema -i kaviar_100.vcf -o schema.json`
+`./expand_and_flatten_vcf.py schema -i kaviar_100.vcf -o schema.json`  
+
 `./expand_and_flatten_vcf.py vcf -i kaviar_100.vcf -o expanded_vcf`
 
 Expand the INFO column and flatten multiple variants to turn a canonical VCF into a flat table. Also extract the schema. Useful for storing in a database---for instance, uploading to GCP BigQuery.
