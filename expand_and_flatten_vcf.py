@@ -117,7 +117,7 @@ class VCF_INFO_EXPANDER():
 #         print(self.fixed_schema)
         self.info_delimiter = info_delimiter
         
-        self.info_schema = self.parseVCF_Schema()
+        self.info_schema, self.flags = self.parseVCF_Schema()
 #         print(self.info_schema)
         
         self.full_schema = self.fixed_schema + self.info_schema
@@ -135,6 +135,7 @@ class VCF_INFO_EXPANDER():
         info_column_index = self.info_column_index
         
         info_schema = []
+        flags = []
         
         with open(vcf_file) as vcf:
 
@@ -166,6 +167,10 @@ class VCF_INFO_EXPANDER():
                     else:
                         info_dict['mode'] = 'NULLABLE'
                     del info_dict['Number']
+                    if info_dict["type"].lower() == "flag":
+#                         print("got a flag")
+                        flags.append(info_dict["name"])
+                        info_dict["type"] = "Integer"
 
                     ### Add parsed schema to base schema
                     info_schema.append(info_dict )
@@ -179,7 +184,7 @@ class VCF_INFO_EXPANDER():
                 else:
                     break
 
-        return info_schema
+        return info_schema, flags
 
     
     def getNumHeaderLines(self):
@@ -205,19 +210,60 @@ class VCF_INFO_EXPANDER():
     def expandInfoData(self, info):
 #         print("expandInfoData")
         
-        fields = self.info_fields
+#         print("info", info)
         
-        kv_pairs = [pair.split("=") for pair in info.split(";")]
-        info_dict = {kv[0]:kv[1] for kv in kv_pairs}
+        fields = self.info_fields
+#         print("fields", fields)
+#         print("info", info)
+#         print("info.split(;)", info.split(";"))
+        
+#         types = [field["type"] for field = self.info_schema]            
 
-        if not fields:
-            fields = info_dict.keys()
+        kv_pairs = [pair.split("=") for pair in info.split(";")]
+#         print("kv_pairs", kv_pairs)
+        
+#         if ("Flag" in types):
+        kv_pairs = self.handleFlags(kv_pairs=kv_pairs)
+                
+#         print("kv_pairs", kv_pairs)
+        # info_dict = {kv[0]:kv[1] for kv in kv_pairs}
+        info_dict = dict(kv_pairs)
+#         print("info_dict", info_dict)
+
+#         if not fields:
+#             fields = info_dict.keys()
 
         info_dict = {k:info_dict.get(k, ".").split(",") for k in fields}
 
         return info_dict
 
-
+    def handleFlags(self, kv_pairs):
+#         print("in handleFlags", kv_pairs)
+              
+#         flags = [field["name"] for field in self.info_schema if field["type"] == "Flag"]
+        flags = self.flags
+#         print("flags", flags)
+        
+        keys = [element[0] for element in kv_pairs]
+#         print("keys", keys)
+        
+        for flag in flags:
+#             print("flag", flag)
+            if flag in keys:
+#                 print("flag", flag, "in keys")
+                
+                index = kv_pairs.index([flag])
+#                 print("index", index)
+#                 print("kv_pairs[index]", kv_pairs[index])
+                kv_pairs[index].append("1")
+            else:
+#                 print("flag", flag, "not in keys")
+                kv_pairs.append([flag, "0"])
+                
+#         print("returning kv_pairs", kv_pairs)
+                
+        return kv_pairs
+        
     def splitRowDict(
             self, 
             row_dict, 
@@ -261,7 +307,7 @@ class VCF_INFO_EXPANDER():
         row_string = ""
         for field in self.all_fields:
             value = row_dict[field]
-            row_string += "\t" if value is "." else (value + "\t")
+            row_string += "\t" if value == "." else (value + "\t")
         row_string += "\n"
 
 #         fields = self.all_fields
@@ -306,7 +352,7 @@ class VCF_INFO_EXPANDER():
 
             ### Start reading
             for line in file:
-#                 print(line)
+#                 print("row_string", line)
                 row_dict = self.convertRowStringToRowDict(row_string=line)
                 row_dicts = self.splitRowDict(row_dict)
 
@@ -325,6 +371,7 @@ class VCF_INFO_EXPANDER():
             self.outfile = open(self.output_vcf_file, "w")
             
         dummy = self.outfile.write(json.dumps(self.full_schema, indent=2))
+
 
 
 if __name__ == "__main__":
